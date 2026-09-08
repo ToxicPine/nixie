@@ -31,15 +31,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1739617151,
-        "narHash": "sha256-XRGjXPLv8ONCDiDt5xlYWfS8/sBCoIHmDwsaUvpA+Dc=",
-        "owner": "nixie-dev",
+        "lastModified": 1788906354,
+        "narHash": "sha256-gyuipRtE+8DycXTHE2hMOXrUUqrdOcOquM/8xQL2ux8=",
+        "owner": "ToxicPine",
         "repo": "fakedir",
-        "rev": "8d6b1a23acc890e8300d7f9671e43567760bf62d",
+        "rev": "57d315f98c36ff229a9c484d1ccd1f748f816743",
         "type": "github"
       },
       "original": {
-        "owner": "nixie-dev",
+        "owner": "ToxicPine",
+        "ref": "fix/darwin-rootless-nix",
         "repo": "fakedir",
         "type": "github"
       }

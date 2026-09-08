@@ -4,7 +4,7 @@
   inputs.amber.url = github:amber-lang/amber;
   inputs.nix.url = github:nixos/nix/2.26.2;
   inputs.fakedir =
-    { url = github:nixie-dev/fakedir;
+    { url = github:ToxicPine/fakedir/fix/darwin-rootless-nix;
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.utils.follows = "flake-utils";
     };

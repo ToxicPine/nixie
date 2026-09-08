@@ -4,6 +4,8 @@
 > [!WARNING]
 >
 > Nixie is currently alpha software, provided as-is with no guarantee. The builder and generated scripts are subject to change, and the current feature set is not to be considered final.
+>
+> This is a temporary LLM slop fork to be used for ToxicPine/offloads.
 
 ---
 

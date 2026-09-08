@@ -55,17 +55,19 @@ fun get_nix()
     trust $trap "{nameof teardown}; exit 1" SIGKILL SIGTERM SIGINT SIGABRT$
 
     // Unpack fakedir as needed
-    if osname == "Darwin" and not file_exists(fakedir_path) {
-        trust dir_create("{cache_root}/nix-deps/lib")
-        pull_binary("libfakedir.dylib", fakedir_path) failed {
-            teardown(true)
-            fail 1
+    if osname == "Darwin" {
+        if not file_exists(fakedir_path) {
+            trust dir_create("{cache_root}/nix-deps/lib")
+            pull_binary("libfakedir.dylib", fakedir_path) failed {
+                teardown(true)
+                fail 1
+            }
         }
-    }
 
-    // Update it if applicable
-    if osname == "Darwin" and not exists_newer(fakedir_path, get_self()):
-        trust pull_binary("libfakedir.dylib", fakedir_path)
+        // Update it if applicable
+        if not exists_newer(fakedir_path, get_self()):
+            trust pull_binary("libfakedir.dylib", fakedir_path)
+    }
 
     // We already have static Nix
     if file_exists(nix_path) {
@@ -132,7 +134,7 @@ fun unpack_channels()
     echo "Unpacking Nix channels, hang tight..."
 
     trust dir_create("{repo_root}/.nixie")
-    untar("channels -C {repo_root}/.nixie") failed {
+    untar("-C {repo_root}/.nixie channels") failed {
         // Leave an empty directory to trip the time check above
         trust $mkdir {repo_root}/.nixie/channels$
     }

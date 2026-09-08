@@ -13,7 +13,9 @@ let me = trust env_var_get("0")
 
 // Quick shenanigan to get real path without readlink -f *sideyes macOS*
 if text_contains(me, "/") {
-    if not starts_with(me, "/") {
+    if starts_with(me, "/") {
+        SELF = me
+    } else {
         let PWD = trust env_var_get("PWD")
         let rl = $readlink {me}$ failed {
             SELF = "{PWD}/{me}"
@@ -34,10 +36,14 @@ if text_contains(me, "/") {
 /// False otherwise.
 pub fun exists_newer(left: Text, right: Text): Bool
 {
-    let left_time = parse_int(trust $stat -c %W {left}$) failed {
+    let stat_cmd = "stat -c %W"
+    if trust $uname -s$ == "Darwin":
+        stat_cmd = "stat -f %B"
+
+    let left_time = parse_int(trust ${stat_cmd} {left}$) failed {
         return false    // Untrustworthy stat, assume worst
     }
-    let right_time = parse_int(trust $stat -c %W {right}$) failed {
+    let right_time = parse_int(trust ${stat_cmd} {right}$) failed {
         return false
     }
 
@@ -107,10 +113,10 @@ fun dump_archive(): Text
 pub fun untar(member: Text, dump: Bool = false): Text?
 {
     let archive = dump_archive()
-    let tar_cmd = "tar -x {member} -f {archive}"
+    let tar_cmd = "tar -x -f {archive} {member}"
 
     if dump {
-        tar_cmd = "tar -x -O {member} -f {archive}"
+        tar_cmd = "tar -x -O -f {archive} {member}"
     }
 
     let tar_out = ${tar_cmd}$ failed {
