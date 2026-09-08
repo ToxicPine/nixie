@@ -47,6 +47,11 @@ fun get_nix()
 
     let nix_path = "{cache_root}/nix-static"
     let fakedir_path = "{cache_root}/nix-deps/lib/libfakedir.dylib"
+    let cache_id = "{cache_root}/nix-static.id"
+    let bins_drv = trust env_var_get("NIX_BINS_DERIVATION")
+    let cached = false
+    if file_exists(cache_id):
+        cached = trust $cat {cache_id}$ == bins_drv
 
     enter_alt_buffer()
     set_title("Building Nix...")
@@ -56,21 +61,17 @@ fun get_nix()
 
     // Unpack fakedir as needed
     if osname == "Darwin" {
-        if not file_exists(fakedir_path) {
+        if not cached or not file_exists(fakedir_path) {
             trust dir_create("{cache_root}/nix-deps/lib")
             pull_binary("libfakedir.dylib", fakedir_path) failed {
                 teardown(true)
                 fail 1
             }
         }
-
-        // Update it if applicable
-        if not exists_newer(fakedir_path, get_self()):
-            trust pull_binary("libfakedir.dylib", fakedir_path)
     }
 
-    // We already have static Nix
-    if file_exists(nix_path) {
+    // A wrapper with newer resources must replace the old cached binary too.
+    if cached and file_exists(nix_path) {
         teardown()
         return 0
     }
@@ -91,6 +92,7 @@ fun get_nix()
     }
 
     trust $chmod +x {nix_path}$
+    trust $echo {bins_drv} > {cache_id}$
 
     teardown()
     return 0

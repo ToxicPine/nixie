@@ -43,13 +43,16 @@ class NixieFeatures:
     def print_features(self) -> str:
         '''Output the features file in the format understood by the generated script.
         '''
+        bins_ref = self.bins_drv
+        if not bins_ref.startswith('https://'):
+            bins_ref = nix.hashify(bins_ref)
         return (
             f"EXTRA_FEATURES=\"{' '.join(self.extra_features)}\"\n"
             f"EXTRA_SUBSTITUTERS=\"{' '.join(self.extra_substituters)}\"\n"
             f"EXTRA_TRUSTED_PUBLIC_KEYS=\"{' '.join(self.extra_trusted_public_keys)}\"\n"
             f"SOURCE_CACHE=\"{self.source_cache}\"\n"
             f"SOURCE_DERIVATION={nix.hashify(self.sources_drv)}\n"
-            f"NIX_BINS_DERIVATION={nix.hashify(self.bins_drv)}\n"
+            f'NIX_BINS_DERIVATION="{bins_ref}"\n'
             f"NIXIE_VERSION={__version__}\n"
         )
 

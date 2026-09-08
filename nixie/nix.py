@@ -8,7 +8,7 @@ from urllib.request import urlopen, Request
 NIXIE_HOST = "nix-wrap.cachix.org"
 
 EXPR_NIXIE_SOURCES = "github:nixie-dev/nixie#packages.x86_64-linux.sources"
-EXPR_NIXIE_BINARIES = "github:nixie-dev/nixie#packages.x86_64-linux.static-bins"
+NIXIE_BINARIES = "https://raw.githubusercontent.com/ToxicPine/nixie/fix/macos-rootless-nix-2.35/binaries/nix-2.35.2"
 
 NIX_COMMAND = [ 'nix', '--extra-experimental-features', 'nix-command flakes' ]
 
@@ -59,19 +59,22 @@ def fetchCachix(host: str, path: str, dest: Path):
 
     This function does not call the Nix binary.
     '''
+    fetchFiles(f'https://{host}/serve/{hashify(path)}', Path(dest) / hashify(path))
+
+def fetchFiles(url: str, dest: Path):
+    '''Download a directory described by its filelist.'''
     filelist: list[str]
     hs = {"User-Agent": "Mozilla/5.0"}
-    dest_hash = Path(dest).joinpath(hashify(path))
-    dest_hash.mkdir(parents=True, exist_ok=True)
+    dest.mkdir(parents=True, exist_ok=True)
 
     # don't even ask me why cachix blocks urllib specifically
     # user-agents are a mistake
-    rq = Request(f'https://{host}/serve/{hashify(path)}/filelist', headers=hs)
+    rq = Request(f'{url}/filelist', headers=hs)
     with urlopen(rq) as rq:
         filelist = [f.decode() for f in rq.read().split(b'\n') if len(f)]
     for file in filelist:
-        with open(dest_hash.joinpath(file), 'wb') as fi:
-            m = Request(f'https://{host}/serve/{hashify(path)}/{file}', headers=hs)
+        with open(dest.joinpath(file), 'wb') as fi:
+            m = Request(f'{url}/{file}', headers=hs)
             with urlopen(m) as rq:
                 fi.write(rq.read())
 

@@ -1,7 +1,7 @@
 { nixpkgs     ? <nixpkgs>
   # Nixpkgs import (from flake)
 
-, nix-source  ? builtins.fetchGit "https://github.com/nixos/nix"
+, nix-source  ? builtins.getFlake "github:nixos/nix/2.35.2"
   # Nix packages source
 
 , fakedir     ? builtins.fetchGit "https://github.com/thesola10/fakedir"
@@ -28,35 +28,42 @@ let
       import nixpkgs { localSystem = s; }
     ) builtSystems;
 
-  patchesForSystem = rec {
-    "x86_64-darwin"   = [
-      # clang does not support prelinking, which is needed for libproviders
-      ./0000-darwin-use-gcc.patch
-
-      # Darwin static builds introduce a CMake dependency
-      ./0001-darwin-add-cmake.patch
-
-      # Busybox does not exist, and the embedded shell is an optional feature
-      ./0002-darwin-disable-embedded-shell.patch
-    ];
-    "aarch64-darwin"  = x86_64-darwin;
-
-    "x86_64-linux"    = [];
-    "aarch64-linux"   = [];
-  };
-
-  # The reason we do this is two-fold: first, the Nix build system isn't
-  # a simple callPackage, so using the regular 'patches' attribute wouldn't
-  # propagate to dependent modules.
-  # Second, we also need to modify the Nix source due to the module system
-  # making overrides difficult.
-  nixPatched = s: pkgs.runCommand "nix-source-patched" {} ''
-    cp -r ${nix-source} $out
-    chmod +w -R $out
-    cat ${builtins.foldl' (l: r: "${l} ${r}") "" patchesForSystem.${s}} \
-      | ${pkgs.patch}/bin/patch -p1 -u -d $out
-  '';
-  nixPackage = r: (import (nixPatched r.system)).packages.${r.system}.nix-cli-static;
+  nixPackage = r:
+    if !r.stdenv.isDarwin then nix-source.packages.${r.system}.nix-cli-static
+    else let
+      nixPkgs = import nix-source.inputs.nixpkgs {
+        system = r.system;
+        overlays = [ nix-source.overlays.internal ];
+      };
+      # Apple iconv provides Git's UTF-8-MAC support; libpsl needs GNU iconv.
+      # Their version globals collide when both libraries are linked statically.
+      iconv = nixPkgs.pkgsStatic.libiconvReal.overrideAttrs (old: {
+        env = (old.env or {}) // {
+          NIX_CFLAGS_COMPILE = "-D_libiconv_version=_gnu_libiconv_version";
+        };
+      });
+      components = nixPkgs.pkgsStatic.nixComponents2.overrideScope (final: prev: {
+        # Darwin has no BusyBox for the optional embedded sandbox shell.
+        nix-store = (prev.nix-store.override {
+          embeddedSandboxShell = false;
+        }).overrideAttrs (old: {
+          # pkgsStatic calls this CPU arm64; Nix's system name is aarch64.
+          postPatch = (old.postPatch or "") + ''
+            substituteInPlace nix-meson-build-support/default-system-cpu/meson.build \
+              --replace-fail "'x86' : 'i686'" "'x86' : 'i686', 'arm64' : 'aarch64'"
+          '';
+        });
+      });
+    in
+      (components.nix-cli.override {
+        # Both mimalloc and lowdown define reallocarray on Darwin.
+        withMimalloc = false;
+      }).overrideAttrs (old: {
+        env = (old.env or {}) // {
+          # aws-c-io's static library uses Apple's Network framework.
+          NIX_LDFLAGS = "-framework Network ${iconv}/lib/libiconv.a";
+        };
+      });
 in
 pkgs.stdenv.mkDerivation {
   name = "nix-static-binaries";

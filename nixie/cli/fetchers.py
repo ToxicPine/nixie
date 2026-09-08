@@ -40,15 +40,11 @@ def eval_latest_sources(args: dict, st = None):
             srcs_eval = _rsrc_fallback('srcs', e)
     else:
         srcs_eval = nix.hashify(args['sources_derivation'])
-    if args['binaries_derivation'] is None:
-        try:
-            bins_eval = nix.flake_eval(nix.EXPR_NIXIE_BINARIES)
-            with open(common.get_appcache().joinpath('bins'), 'w') as fi:
-                fi.write(bins_eval)
-        except RuntimeError as e:
-            bins_eval = _rsrc_fallback('bins', e)
-    else:
-        bins_eval = nix.hashify(args['binaries_derivation'])
+    bins_eval = args['binaries_derivation']
+    if bins_eval is None:
+        bins_eval = nix.NIXIE_BINARIES
+    elif not bins_eval.startswith('https://'):
+        bins_eval = nix.hashify(bins_eval)
     debug(f"Sources derivation: {srcs_eval}")
     debug(f"Binaries derivation: {bins_eval}")
     return srcs_eval, bins_eval
@@ -68,11 +64,14 @@ def prefetch_resources(tdir: Path,
                        st = None):
     if feats.include_bins:
         st.update("Downloading offline binaries...")
-        try:
-            nix.fetchCachix(feats.source_cache, feats.bins_drv, tdir)
-        except:
-            warn("Binaries derivation could not be downloaded.")
-            _tmplink(tdir, feats.bins_drv)
+        if feats.bins_drv.startswith('https://'):
+            nix.fetchFiles(feats.bins_drv, tdir / 'binaries')
+        else:
+            try:
+                nix.fetchCachix(feats.source_cache, feats.bins_drv, tdir)
+            except:
+                warn("Binaries derivation could not be downloaded.")
+                _tmplink(tdir, feats.bins_drv)
     if feats.include_sources:
         st.update("Downloading offline sources...")
         try:

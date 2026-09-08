@@ -4,6 +4,7 @@
 
 import { file_download } from "std/http"
 import { file_exists } from "std/fs"
+import { starts_with } from "std/text"
 import { env_var_get, env_var_test } from "std/env"
 
 import { untar } from "./common.ab"
@@ -86,7 +87,10 @@ pub fun pull_binary(member: Text, dest: Text): Null?
     if status != 0 {
         let tmpf = trust $mktemp -t nixie_{member}_XXXXXXXX$
 
-        file_download(cachix_url(NIX_BINS_DERIVATION, member), tmpf)?
+        let url = "{NIX_BINS_DERIVATION}/{member}"
+        if not starts_with(NIX_BINS_DERIVATION, "https://"):
+            url = cachix_url(NIX_BINS_DERIVATION, member)
+        file_download(url, tmpf)?
 
         where = tmpf
     }

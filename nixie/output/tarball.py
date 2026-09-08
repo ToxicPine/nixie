@@ -97,7 +97,8 @@ class ResourceTarball:
                     with tf.open(f, mode='r:*') as fm:
                         self.transplant(m, fm, 'sources')
             if self.features.include_bins:
-                bins = [ f for f in tmpdir.joinpath(nix.hashify(self.features.bins_drv)).resolve().iterdir()
+                bins_dir = 'binaries' if self.features.bins_drv.startswith('https://') else nix.hashify(self.features.bins_drv)
+                bins = [ f for f in tmpdir.joinpath(bins_dir).resolve().iterdir()
                             if f.name != 'filelist' ]
                 for f in bins:
                     m.add(f, path.basename(f))

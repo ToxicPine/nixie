@@ -1,0 +1,4 @@
+libfakedir.dylib
+nix.Darwin.arm64
+nix.Linux.aarch64
+nix.Linux.x86_64
